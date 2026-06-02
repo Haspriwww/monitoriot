@@ -29,6 +29,7 @@ onValue(sensorRef, (snapshot) => {
   // Teruskan ke chart
   window.__sensorData = data;
   if (window.renderChart) window.renderChart(data.chart);
+  window.updateLastUpdatedLabel();
 }, () => loadDummy());
 
 function updateStats(data) {
@@ -73,6 +74,7 @@ async function loadDummy() {
     updateTable(data.history || []);
     window.__sensorData = data;
     if (window.renderChart) window.renderChart(data.chart);
+    window.updateLastUpdatedLabel();
   } catch (e) {
     console.warn('Tidak bisa memuat data dummy:', e);
   }
@@ -104,6 +106,7 @@ function createManualRefreshButton() {
       if (typeof window.refreshPageData === 'function') {
         await window.refreshPageData();
       }
+      window.updateLastUpdatedLabel();
       const nextExpiry = Date.now() + REFRESH_INTERVAL_MS;
       setRefreshExpiry(nextExpiry);
       window.startRefreshCountdown(REFRESH_INTERVAL_MS);
@@ -119,6 +122,33 @@ function createManualRefreshButton() {
   return button;
 }
 
+function createLastUpdatedLabel() {
+  let label = document.getElementById('lastUpdatedLabel');
+  if (label) return label;
+
+  const container = document.querySelector('.topbar-actions');
+  if (!container) return null;
+
+  createManualRefreshButton();
+
+  label = document.createElement('div');
+  label.id = 'lastUpdatedLabel';
+  label.className = 'badge-pill ok';
+  label.style.minWidth = '190px';
+  label.style.textAlign = 'center';
+  label.style.whiteSpace = 'nowrap';
+  label.style.marginRight = '10px';
+  label.textContent = 'Terakhir diperbarui: -';
+
+  const refreshBtn = document.getElementById('manualRefreshBtn');
+  if (refreshBtn && refreshBtn.nextSibling) {
+    container.insertBefore(label, refreshBtn.nextSibling);
+  } else {
+    container.appendChild(label);
+  }
+  return label;
+}
+
 function createRefreshCountdownLabel() {
   let label = document.getElementById('refreshCountdown');
   if (label) return label;
@@ -127,6 +157,7 @@ function createRefreshCountdownLabel() {
   if (!container) return null;
 
   createManualRefreshButton();
+  createLastUpdatedLabel();
 
   label = document.createElement('div');
   label.id = 'refreshCountdown';
@@ -170,6 +201,15 @@ window.updateRefreshCountdown = function (seconds) {
   label.textContent = seconds > 0 ? `Refresh dalam ${seconds} detik` : 'Memperbarui...';
 };
 
+window.updateLastUpdatedLabel = function (date = new Date()) {
+  const label = createLastUpdatedLabel();
+  if (!label) return;
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  label.textContent = `Terakhir diperbarui: ${hours}:${minutes}:${seconds}`;
+};
+
 window.startRefreshCountdown = function (interval = REFRESH_INTERVAL_MS) {
   if (window.__refreshCountdownTimer) {
     window.clearInterval(window.__refreshCountdownTimer);
@@ -203,6 +243,7 @@ window.setupAutoRefresh = function (interval = REFRESH_INTERVAL_MS) {
     if (typeof window.refreshPageData === 'function') {
       try {
         await window.refreshPageData();
+        window.updateLastUpdatedLabel();
       } catch (err) {
         console.warn('Auto-refresh gagal:', err);
       }
