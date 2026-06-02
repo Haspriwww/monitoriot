@@ -35,3 +35,35 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (ev
     setTheme(event.matches ? 'dark' : 'light');
   }
 });
+
+function createBackToTopButton() {
+  if (document.getElementById('backToTopButton')) return;
+
+  const button = document.createElement('button');
+  button.id = 'backToTopButton';
+  button.type = 'button';
+  button.className = 'back-to-top';
+  button.setAttribute('aria-label', 'Kembali ke atas');
+  button.innerHTML = '↑';
+
+  button.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  document.body.appendChild(button);
+  toggleBackToTopButton();
+}
+
+function toggleBackToTopButton() {
+  const button = document.getElementById('backToTopButton');
+  if (!button) return;
+  button.classList.toggle('visible', window.scrollY > 200);
+}
+
+window.addEventListener('scroll', toggleBackToTopButton, { passive: true });
+window.addEventListener('resize', toggleBackToTopButton);
+window.addEventListener('DOMContentLoaded', createBackToTopButton);
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  createBackToTopButton();
+}
