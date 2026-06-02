@@ -256,6 +256,11 @@ window.setupAutoRefresh = function (interval = REFRESH_INTERVAL_MS) {
 
 window.setupAutoRefresh();
 
+document.addEventListener('DOMContentLoaded', () => {
+  createLastUpdatedLabel();
+  createManualRefreshButton();
+});
+
 // ====================================
 // RELAY CONTROL
 // ====================================
