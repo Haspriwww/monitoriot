@@ -81,12 +81,52 @@ async function loadDummy() {
 const REFRESH_INTERVAL_MS = 40000;
 const REFRESH_EXPIRY_KEY = 'monitor8_refresh_expires';
 
+function createManualRefreshButton() {
+  let button = document.getElementById('manualRefreshBtn');
+  if (button) return button;
+
+  const container = document.querySelector('.topbar-actions');
+  if (!container) return null;
+
+  button = document.createElement('button');
+  button.id = 'manualRefreshBtn';
+  button.type = 'button';
+  button.className = 'theme-toggle';
+  button.textContent = 'Refresh';
+  button.title = 'Segarkan data sekarang';
+  button.style.marginRight = '10px';
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    const originalText = button.textContent;
+    button.textContent = 'Memperbarui...';
+
+    try {
+      if (typeof window.refreshPageData === 'function') {
+        await window.refreshPageData();
+      }
+      const nextExpiry = Date.now() + REFRESH_INTERVAL_MS;
+      setRefreshExpiry(nextExpiry);
+      window.startRefreshCountdown(REFRESH_INTERVAL_MS);
+    } catch (err) {
+      console.warn('Manual refresh gagal:', err);
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  });
+
+  container.insertBefore(button, container.firstChild);
+  return button;
+}
+
 function createRefreshCountdownLabel() {
   let label = document.getElementById('refreshCountdown');
   if (label) return label;
 
   const container = document.querySelector('.topbar-actions');
   if (!container) return null;
+
+  createManualRefreshButton();
 
   label = document.createElement('div');
   label.id = 'refreshCountdown';
