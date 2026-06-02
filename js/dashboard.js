@@ -78,6 +78,103 @@ async function loadDummy() {
   }
 }
 
+const REFRESH_INTERVAL_MS = 40000;
+const REFRESH_EXPIRY_KEY = 'monitor8_refresh_expires';
+
+function createRefreshCountdownLabel() {
+  let label = document.getElementById('refreshCountdown');
+  if (label) return label;
+
+  const container = document.querySelector('.topbar-actions');
+  if (!container) return null;
+
+  label = document.createElement('div');
+  label.id = 'refreshCountdown';
+  label.className = 'badge-pill ok';
+  label.style.minWidth = '170px';
+  label.style.textAlign = 'center';
+  label.style.whiteSpace = 'nowrap';
+  label.textContent = 'Refresh dalam 40 detik';
+  container.appendChild(label);
+  return label;
+}
+
+function getRefreshExpiry() {
+  const raw = sessionStorage.getItem(REFRESH_EXPIRY_KEY);
+  return raw ? Number(raw) : 0;
+}
+
+function setRefreshExpiry(expiresAt) {
+  sessionStorage.setItem(REFRESH_EXPIRY_KEY, String(expiresAt));
+}
+
+function ensureRefreshExpiry(interval = REFRESH_INTERVAL_MS) {
+  const now = Date.now();
+  let expiry = getRefreshExpiry();
+  if (!expiry || expiry <= now) {
+    expiry = now + interval;
+    setRefreshExpiry(expiry);
+  }
+  return expiry;
+}
+
+function getRefreshRemainingSeconds() {
+  const expiry = getRefreshExpiry();
+  if (!expiry) return Math.ceil(REFRESH_INTERVAL_MS / 1000);
+  return Math.max(0, Math.ceil((expiry - Date.now()) / 1000));
+}
+
+window.updateRefreshCountdown = function (seconds) {
+  const label = createRefreshCountdownLabel();
+  if (!label) return;
+  label.textContent = seconds > 0 ? `Refresh dalam ${seconds} detik` : 'Memperbarui...';
+};
+
+window.startRefreshCountdown = function (interval = REFRESH_INTERVAL_MS) {
+  if (window.__refreshCountdownTimer) {
+    window.clearInterval(window.__refreshCountdownTimer);
+  }
+
+  const expiry = ensureRefreshExpiry(interval);
+  window.updateRefreshCountdown(getRefreshRemainingSeconds());
+
+  window.__refreshCountdownTimer = window.setInterval(() => {
+    const remaining = getRefreshRemainingSeconds();
+    window.updateRefreshCountdown(remaining);
+  }, 1000);
+};
+
+// Auto-refresh helper untuk semua halaman yang memanfaatkan data dummy atau Firebase fallback
+window.refreshPageData = async function () {
+  if (!window.__sensorData || Object.keys(window.__sensorData).length === 0) {
+    await loadDummy();
+  }
+};
+
+window.setupAutoRefresh = function (interval = REFRESH_INTERVAL_MS) {
+  if (window.__autoRefreshTimer) {
+    window.clearInterval(window.__autoRefreshTimer);
+  }
+
+  ensureRefreshExpiry(interval);
+  window.startRefreshCountdown(interval);
+
+  window.__autoRefreshTimer = window.setInterval(async () => {
+    if (typeof window.refreshPageData === 'function') {
+      try {
+        await window.refreshPageData();
+      } catch (err) {
+        console.warn('Auto-refresh gagal:', err);
+      }
+    }
+    const nextExpiry = Date.now() + interval;
+    setRefreshExpiry(nextExpiry);
+    window.startRefreshCountdown(interval);
+  }, interval);
+};
+
+window.setupAutoRefresh();
+
 // ====================================
 // RELAY CONTROL
 // ====================================

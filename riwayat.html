@@ -97,10 +97,11 @@
   <script type="module" src="js/dashboard.js"></script>
   <script>
     // Render chart riwayat
+    let historyChart;
     fetch('data/dummy.json').then(r => r.json()).then(data => {
       // Chart
       const ctx = document.getElementById('historyChart');
-      new Chart(ctx, {
+      historyChart = new Chart(ctx, {
         type: 'line',
         data: {
           labels: data.chart?.labels || [],
@@ -146,6 +147,37 @@
         </tr>
       `).join('');
     }).catch(() => {});
+
+    async function refreshHistoryData() {
+      try {
+        const res = await fetch('data/dummy.json');
+        const data = await res.json();
+        const rows = data.history || [];
+        document.getElementById('rowCount').textContent = `${rows.length} entri`;
+        document.getElementById('historyTable').innerHTML = rows.map(r => `
+          <tr>
+            <td>${r.waktu}</td>
+            <td>${r.sensor}</td>
+            <td>${r.nilai}</td>
+            <td><span class="badge-pill ${r.status === 'OK' ? 'ok' : r.status === 'WARN' ? 'warn' : 'err'}">${r.status}</span></td>
+          </tr>
+        `).join('');
+
+        if (historyChart) {
+          historyChart.data.labels = data.chart?.labels || [];
+          historyChart.data.datasets[0].data = data.chart?.suhu || [];
+          historyChart.data.datasets[1].data = data.chart?.kelembapan || [];
+          historyChart.update();
+        }
+      } catch (e) {
+        console.warn('Gagal refresh riwayat data:', e);
+      }
+    }
+
+    window.refreshPageData = refreshHistoryData;
+    if (typeof window.setupAutoRefresh === 'function') {
+      window.setupAutoRefresh();
+    }
   </script>
 </body>
 </html>

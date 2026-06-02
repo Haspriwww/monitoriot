@@ -114,14 +114,27 @@
       `).join('');
     }
 
-    // Load dummy data sebagai fallback
-    fetch('data/dummy.json').then(r => r.json()).then(data => {
-      populateSensorTable(data);
-      document.getElementById('statSuhu').textContent = (data.suhu ?? '--') + '°C';
-      document.getElementById('statKelembapan').textContent = (data.kelembapan ?? '--') + '%';
-      document.getElementById('statTekanan').textContent = (data.tekanan ?? '--') + ' hPa';
-      document.getElementById('statCahaya').textContent = (data.cahaya ?? '--') + ' lx';
-    }).catch(() => {});
+    // Load dummy data sebagai fallback dan refresh otomatis setiap 40 detik
+    async function refreshSensorData() {
+      try {
+        const res = await fetch('data/dummy.json');
+        const data = await res.json();
+        populateSensorTable(data);
+        document.getElementById('statSuhu').textContent = (data.suhu ?? '--') + '°C';
+        document.getElementById('statKelembapan').textContent = (data.kelembapan ?? '--') + '%';
+        document.getElementById('statTekanan').textContent = (data.tekanan ?? '--') + ' hPa';
+        document.getElementById('statCahaya').textContent = (data.cahaya ?? '--') + ' lx';
+      } catch (e) {
+        console.warn('Gagal memuat data sensor:', e);
+      }
+    }
+
+    window.refreshPageData = refreshSensorData;
+    refreshSensorData().then(() => {
+      if (typeof window.setupAutoRefresh === 'function') {
+        window.setupAutoRefresh();
+      }
+    });
   </script>
 </body>
 </html>
