@@ -268,6 +268,22 @@ const relayRef = ref(db, 'relay/1');
 const relayToggle = document.getElementById('relayToggle');
 const relayLabel  = document.getElementById('relayLabel');
 const relayStatus = document.getElementById('relayStatus');
+const notificationArea = document.getElementById('notificationArea');
+
+function showNotification(message, type = 'info', duration = 4500) {
+  if (!notificationArea) return;
+  const note = document.createElement('div');
+  note.className = `notification ${type}`;
+  note.textContent = message;
+  notificationArea.appendChild(note);
+
+  requestAnimationFrame(() => note.classList.add('show'));
+
+  window.setTimeout(() => {
+    note.classList.remove('show');
+    note.addEventListener('transitionend', () => note.remove(), { once: true });
+  }, duration);
+}
 
 // Dengarkan perubahan relay dari Firebase (realtime)
 onValue(relayRef, (snapshot) => {
@@ -319,9 +335,11 @@ if (relayToggle) {
       }
 
       await set(historyRef, history);
+      showNotification('Relay 1 berhasil diperbarui.', 'success');
 
     } catch (err) {
       console.error('Gagal mengubah relay atau mencatat riwayat:', err);
+      showNotification('Gagal memperbarui relay. Periksa koneksi atau izin Firebase.', 'error');
       // Kembalikan toggle jika gagal
       relayToggle.checked = !relayToggle.checked;
     }
